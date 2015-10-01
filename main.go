@@ -31,7 +31,7 @@ func main() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/movies", handleMovies).Methods("GET")
-	router.HandleFunc("/movie/{imdbKey}", handleMovie).Methods("GET", "DELETE")
+	router.HandleFunc("/movie/{imdbKey}", handleMovie).Methods("GET", "DELETE", "POST")
 	http.ListenAndServe(":8080", router)
 }
 
@@ -57,15 +57,13 @@ func handleMovie(res http.ResponseWriter, req *http.Request) {
 
 	log.Println("Request for :", imdbKey)
 
-	movie, ok := movies[imdbKey]
-
-	if !ok {
-		res.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(res, string("Movie not found"))
-	}
-
 	switch req.Method {
 	case "GET":
+		movie, ok := movies[imdbKey]
+		if !ok {
+			res.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(res, string("Movie not found"))
+		}
 		outgoingJSON, error := json.Marshal(movie)
 		if error != nil {
 			log.Println(error.Error())
@@ -76,5 +74,23 @@ func handleMovie(res http.ResponseWriter, req *http.Request) {
 	case "DELETE":
 		delete(movies, imdbKey)
 		res.WriteHeader(http.StatusNoContent)
+	case "POST":
+		movie := new(Movie)
+		decoder := json.NewDecoder(req.Body)
+		error := decoder.Decode(&movie)
+		if error != nil {
+			log.Println(error.Error())
+			http.Error(res, error.Error(), http.StatusInternalServerError)
+			return
+		}
+		movies[imdbKey] = movie
+		outgoingJSON, err := json.Marshal(movie)
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		res.WriteHeader(http.StatusCreated)
+		fmt.Fprintf(res, string(outgoingJSON))
 	}
 }

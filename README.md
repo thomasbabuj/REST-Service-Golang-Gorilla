@@ -8,3 +8,5 @@ Step 2 : /movies route returns some json string
 Step 3 : /movie/{id} -> return specific record
 
 Step 4 : /movie/{id} -> Remove a record
+
+Step 5 : /movie/{id} -> Delete a record
