@@ -31,7 +31,7 @@ func main() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/movies", handleMovies).Methods("GET")
-	router.HandleFunc("/movie/{imdbKey}", handleMovie).Methods("GET")
+	router.HandleFunc("/movie/{imdbKey}", handleMovie).Methods("GET", "DELETE")
 	http.ListenAndServe(":8080", router)
 }
 
@@ -57,18 +57,24 @@ func handleMovie(res http.ResponseWriter, req *http.Request) {
 
 	log.Println("Request for :", imdbKey)
 
-	if movie, ok := movies[imdbKey]; ok {
-		outgoingJSON, error := json.Marshal(movie)
+	movie, ok := movies[imdbKey]
 
+	if !ok {
+		res.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(res, string("Movie not found"))
+	}
+
+	switch req.Method {
+	case "GET":
+		outgoingJSON, error := json.Marshal(movie)
 		if error != nil {
 			log.Println(error.Error())
 			http.Error(res, error.Error(), http.StatusInternalServerError)
 			return
 		}
-
 		fmt.Fprint(res, string(outgoingJSON))
-	} else {
-		res.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(res, string("Requested Movie not found"))
+	case "DELETE":
+		delete(movies, imdbKey)
+		res.WriteHeader(http.StatusNoContent)
 	}
 }
